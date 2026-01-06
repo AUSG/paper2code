@@ -1,0 +1,103 @@
+name: Train on Vast.ai
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      extra_args:
+        description: 'Extra arguments for training'
+        required: false
+        default: ''
+
+jobs:
+  launch-vastai:
+    runs-on: ubuntu-latest
+    # PR 코멘트에서 /train 명령어가 있을 때만 실행
+    if: |
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/train')) ||
+      github.event_name == 'workflow_dispatch'
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: React to comment
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: Get PR branch
+        id: pr-info
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('ref', pr.data.head.ref);
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr-info.outputs.ref || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests vastai
+
+      - name: Launch Vast.ai instance
+        env:
+          VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          S3_DATA_PATH: ${{ secrets.S3_DATA_PATH }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_USER: ${{ github.repository_owner }}
+          GH_REPO: ${{ github.event.repository.name }}
+          GH_BRANCH: ${{ steps.pr-info.outputs.ref || github.ref_name }}
+        run: |
+          python scripts/vastai_launcher.py \
+            --wandb-key "$WANDB_API_KEY" \
+            --hf-token "$HF_TOKEN" \
+            --aws-key "$AWS_ACCESS_KEY_ID" \
+            --aws-secret "$AWS_SECRET_ACCESS_KEY" \
+            --aws-region "${AWS_DEFAULT_REGION:-ap-northeast-2}" \
+            --s3-path "$S3_DATA_PATH" \
+            --gh-token "$GH_TOKEN" \
+            --gh-user "$GH_USER" \
+            --gh-repo "$GH_REPO" \
+            --gh-branch "$GH_BRANCH"
+
+      - name: Comment result on PR
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Training launched successfully!\n\n- Branch: \`${{ steps.pr-info.outputs.ref || github.ref_name }}\`\n- [View workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+            });
