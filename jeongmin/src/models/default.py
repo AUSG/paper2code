@@ -4,7 +4,7 @@ from torch import nn
 import lightning as L
 from lightning.pytorch.loggers import WandbLogger
 
-from torchmetrics import Accuracy
+from torchmetrics import Accuracy, F1Score
 
 try:
     import wandb
@@ -27,6 +27,7 @@ class DefaultModel(L.LightningModule):
         self.vis_per_batch = vis_per_batch
 
         self.accuracy = Accuracy(task="multiclass", num_classes=10)
+        self.f1score = F1Score(task="multiclass", num_classes=10)
 
     def forward(self, x):
         return self.net(x)
@@ -69,11 +70,13 @@ class DefaultModel(L.LightningModule):
 
         loss = self.criterion(pred, labels)
         acc = self.accuracy(pred, labels)
+        f1 = self.f1score(pred, labels)
 
         self.log_dict(
             {
                 "val/loss": loss.item(),
                 "val/acc": acc,
+                "val/f1": f1,
             },
             on_epoch=True,
             on_step=False,
@@ -99,4 +102,6 @@ class DefaultModel(L.LightningModule):
         pred = self(img)
 
         acc = self.accuracy(pred, labels)
+        f1 = self.f1score(pred, labels)
         self.log("test/acc", acc)
+        self.log("test/f1", f1)

@@ -1,2 +1,2 @@
-from . import resnet18
+from . import resnet
 from . import simplenet
