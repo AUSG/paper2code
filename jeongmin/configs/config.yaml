@@ -1,12 +1,12 @@
 # lightning.pytorch==2.0.0
 name: my_experiment
-version: my_version_1
+version: my_version_10
 
 seed_everything: 42
 trainer:
   accelerator: auto
   precision: 16-mixed
-  max_epochs: 300
+  max_epochs: 200
   deterministic: true
   plugins:
     - AsyncCheckpointIO
@@ -33,22 +33,21 @@ data:
   class_path: Cifar10DataModule
   init_args:
     root: data
-    batch_size: 128
-    val_split: 0.1
+    batch_size: 256
+    val_split: 0.2
     transforms:
       class_path: DefaultTransforms
 
 optimizer:
-  class_path: SGD
+  class_path: AdamW
   init_args:
-    lr: 0.1
-    momentum: 0.9
-    weight_decay: 5e-4
+    lr: 0.001
+    weight_decay: 0.01
 
 lr_scheduler:
   class_path: LinearWarmupCosineAnnealingLR
   init_args:
-    warmup_epochs: 20
+    warmup_epochs: 10
     max_epochs: ${trainer.max_epochs}
 
 early_stopping:
