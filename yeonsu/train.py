@@ -216,7 +216,7 @@ def plot_training_curves(exp_dir, train_losses, train_accs, test_losses, test_ac
     axes[0, 1].legend(fontsize=10)
     axes[0, 1].grid(True, alpha=0.3)
     
-    # 3. Loss 비교 (확대)
+    # 3. Loss 비교 (확대) - 마지막 절반 에폭의 범위로 확대
     axes[1, 0].plot(epochs, train_losses, 'b-', label='Train Loss', linewidth=2, alpha=0.7)
     axes[1, 0].plot(epochs, test_losses, 'r-', label='Test Loss', linewidth=2, alpha=0.7)
     axes[1, 0].set_xlabel('Epoch', fontsize=12)
@@ -224,15 +224,17 @@ def plot_training_curves(exp_dir, train_losses, train_accs, test_losses, test_ac
     axes[1, 0].set_title('Loss (Zoomed)', fontsize=14, fontweight='bold')
     axes[1, 0].legend(fontsize=10)
     axes[1, 0].grid(True, alpha=0.3)
-    # Y축 범위를 최소/최대값 기준으로 설정
-    all_losses = train_losses + test_losses
-    if len(all_losses) > 0:
-        min_loss = min(all_losses)
-        max_loss = max(all_losses)
-        margin = (max_loss - min_loss) * 0.1
-        axes[1, 0].set_ylim([max(0, min_loss - margin), max_loss + margin])
+    # 마지막 절반 에폭의 범위로 확대하여 세밀한 변화 관찰
+    if len(train_losses) > 0:
+        half_point = len(train_losses) // 2
+        zoom_losses = train_losses[half_point:] + test_losses[half_point:]
+        if len(zoom_losses) > 0:
+            min_loss = min(zoom_losses)
+            max_loss = max(zoom_losses)
+            margin = (max_loss - min_loss) * 0.15
+            axes[1, 0].set_ylim([max(0, min_loss - margin), max_loss + margin])
     
-    # 4. Accuracy 비교 (확대)
+    # 4. Accuracy 비교 (확대) - 마지막 절반 에폭의 범위로 확대
     axes[1, 1].plot(epochs, train_accs, 'b-', label='Train Accuracy', linewidth=2, alpha=0.7)
     axes[1, 1].plot(epochs, test_accs, 'r-', label='Test Accuracy', linewidth=2, alpha=0.7)
     axes[1, 1].set_xlabel('Epoch', fontsize=12)
@@ -240,13 +242,15 @@ def plot_training_curves(exp_dir, train_losses, train_accs, test_losses, test_ac
     axes[1, 1].set_title('Accuracy (Zoomed)', fontsize=14, fontweight='bold')
     axes[1, 1].legend(fontsize=10)
     axes[1, 1].grid(True, alpha=0.3)
-    # Y축 범위를 최소/최대값 기준으로 설정
-    all_accs = train_accs + test_accs
-    if len(all_accs) > 0:
-        min_acc = min(all_accs)
-        max_acc = max(all_accs)
-        margin = (max_acc - min_acc) * 0.1
-        axes[1, 1].set_ylim([max(0, min_acc - margin), min(100, max_acc + margin)])
+    # 마지막 절반 에폭의 범위로 확대하여 세밀한 변화 관찰
+    if len(train_accs) > 0:
+        half_point = len(train_accs) // 2
+        zoom_accs = train_accs[half_point:] + test_accs[half_point:]
+        if len(zoom_accs) > 0:
+            min_acc = min(zoom_accs)
+            max_acc = max(zoom_accs)
+            margin = (max_acc - min_acc) * 0.15
+            axes[1, 1].set_ylim([max(0, min_acc - margin), min(100, max_acc + margin)])
     
     plt.tight_layout()
     
